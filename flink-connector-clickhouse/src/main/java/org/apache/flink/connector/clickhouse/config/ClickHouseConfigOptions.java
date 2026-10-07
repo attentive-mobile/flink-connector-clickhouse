@@ -97,8 +97,7 @@ public class ClickHouseConfigOptions {
             ConfigOptions.key(ClickHouseConfig.SINK_MAX_RETRIES)
                     .intType()
                     .defaultValue(3)
-                    .withDescription(
-                            "Retained for compatibility; ignored. Write failures propagate to Flink for recovery.");
+                    .withDescription("Retained for compatibility; ignored.");
 
     public static final ConfigOption<SinkUpdateStrategy> SINK_UPDATE_STRATEGY =
             ConfigOptions.key(ClickHouseConfig.SINK_UPDATE_STRATEGY)
