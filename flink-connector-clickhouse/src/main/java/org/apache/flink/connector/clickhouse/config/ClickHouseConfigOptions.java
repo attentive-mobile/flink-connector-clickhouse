@@ -97,7 +97,8 @@ public class ClickHouseConfigOptions {
             ConfigOptions.key(ClickHouseConfig.SINK_MAX_RETRIES)
                     .intType()
                     .defaultValue(3)
-                    .withDescription("The max retry times if writing records to database failed.");
+                    .withDescription(
+                            "Retained for compatibility; ignored. Write failures propagate to Flink for recovery.");
 
     public static final ConfigOption<SinkUpdateStrategy> SINK_UPDATE_STRATEGY =
             ConfigOptions.key(ClickHouseConfig.SINK_UPDATE_STRATEGY)

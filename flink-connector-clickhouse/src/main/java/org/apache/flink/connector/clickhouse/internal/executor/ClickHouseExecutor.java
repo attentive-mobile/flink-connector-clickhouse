@@ -20,7 +20,6 @@ package org.apache.flink.connector.clickhouse.internal.executor;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.connector.clickhouse.internal.ClickHouseStatementFactory;
 import org.apache.flink.connector.clickhouse.internal.connection.ClickHouseConnectionProvider;
-import org.apache.flink.connector.clickhouse.internal.connection.ClickHouseStatementWrapper;
 import org.apache.flink.connector.clickhouse.internal.converter.ClickHouseRowConverter;
 import org.apache.flink.connector.clickhouse.internal.options.ClickHouseDmlOptions;
 import org.apache.flink.table.data.GenericRowData;
@@ -30,8 +29,6 @@ import org.apache.flink.table.types.logical.RowType;
 
 import com.clickhouse.jdbc.ClickHouseConnection;
 import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.sql.SQLException;
@@ -44,8 +41,6 @@ import static org.apache.flink.table.data.RowData.createFieldGetter;
 /** Executor interface for submitting data to ClickHouse. */
 public interface ClickHouseExecutor extends Serializable {
 
-    Logger LOG = LoggerFactory.getLogger(ClickHouseExecutor.class);
-
     void prepareStatement(ClickHouseConnection connection) throws SQLException;
 
     void prepareStatement(ClickHouseConnectionProvider connectionProvider) throws SQLException;
@@ -57,32 +52,6 @@ public interface ClickHouseExecutor extends Serializable {
     void executeBatch() throws SQLException;
 
     void closeStatement();
-
-    default void attemptExecuteBatch(ClickHouseStatementWrapper stmt, int maxRetries)
-            throws SQLException {
-        for (int i = 0; i <= maxRetries; i++) {
-            try {
-                stmt.executeBatch();
-                return;
-            } catch (Exception exception) {
-                LOG.error("ClickHouse executeBatch error, retry times = {}", i, exception);
-                if (i >= maxRetries) {
-                    throw new SQLException(
-                            String.format(
-                                    "Attempt to execute batch failed, exhausted retry times = %d",
-                                    maxRetries),
-                            exception);
-                }
-                try {
-                    Thread.sleep(1000L * i);
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                    throw new SQLException(
-                            "Unable to flush; interrupted while doing another attempt", ex);
-                }
-            }
-        }
-    }
 
     static ClickHouseExecutor createClickHouseExecutor(
             String tableName,
