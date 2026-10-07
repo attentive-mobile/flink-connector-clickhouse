@@ -43,7 +43,7 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     private final ClickHouseRowConverter converter;
 
-    private final int maxRetries;
+    private transient SQLException batchException;
 
     private transient ClickHouseStatementWrapper statement;
 
@@ -53,7 +53,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
             String insertSql, ClickHouseRowConverter converter, ClickHouseDmlOptions options) {
         this.insertSql = insertSql;
         this.converter = converter;
-        this.maxRetries = options.getMaxRetries();
     }
 
     @Override
@@ -94,7 +93,17 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     @Override
     public void executeBatch() throws SQLException {
-        attemptExecuteBatch(statement, maxRetries);
+        if (batchException != null) {
+            throw batchException;
+        }
+        try {
+            // JDBC clears the batch even on failure; retrying it can report empty success.
+            statement.executeBatch();
+        } catch (SQLException exception) {
+            // Keep subsequent flushes/checkpoints from succeeding until Flink recreates the sink.
+            batchException = exception;
+            throw exception;
+        }
     }
 
     @Override
@@ -116,8 +125,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
                 + "insertSql='"
                 + insertSql
                 + '\''
-                + ", maxRetries="
-                + maxRetries
                 + ", connectionProvider="
                 + connectionProvider
                 + '}';
