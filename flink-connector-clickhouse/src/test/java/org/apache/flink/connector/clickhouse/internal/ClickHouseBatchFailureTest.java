@@ -101,7 +101,7 @@ public class ClickHouseBatchFailureTest {
         }
     }
 
-    private static ClickHouseBatchOutputFormat openFormat(ClearingStatement jdbc, int batchSize)
+    static ClickHouseBatchOutputFormat openFormat(InvocationHandler jdbc, int batchSize)
             throws Exception {
         ClickHouseDmlOptions options =
                 new ClickHouseDmlOptions.Builder()
