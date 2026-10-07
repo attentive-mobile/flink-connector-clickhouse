@@ -138,7 +138,6 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
         for (ClickHouseStatementWrapper clickHouseStatement :
                 Arrays.asList(insertStatement, updateStatement, deleteStatement)) {
             if (clickHouseStatement != null) {
-                // Let Flink restore and replay on failure.
                 clickHouseStatement.executeBatch();
             }
         }

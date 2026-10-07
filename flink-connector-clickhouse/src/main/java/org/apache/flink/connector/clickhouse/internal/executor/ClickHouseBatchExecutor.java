@@ -91,7 +91,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     @Override
     public void executeBatch() throws SQLException {
-        // Let Flink restore and replay on failure.
         statement.executeBatch();
     }
 
