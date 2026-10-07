@@ -116,6 +116,7 @@ public abstract class AbstractClickHouseOutputFormat extends RichOutputFormat<Ro
             try {
                 flush();
             } catch (Exception exception) {
+                flushException = exception;
                 LOG.warn("Flushing records to ClickHouse failed.", exception);
             }
 
