@@ -64,8 +64,6 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
 
     private final Function<RowData, RowData> keyExtractor;
 
-    private final int maxRetries;
-
     private final SinkUpdateStrategy updateStrategy;
 
     private final boolean ignoreDelete;
@@ -98,7 +96,6 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
         this.deleteConverter = deleteConverter;
         this.updateExtractor = updateExtractor;
         this.keyExtractor = keyExtractor;
-        this.maxRetries = options.getMaxRetries();
         this.updateStrategy = options.getUpdateStrategy();
         this.ignoreDelete = options.isIgnoreDelete();
     }
@@ -141,7 +138,7 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
         for (ClickHouseStatementWrapper clickHouseStatement :
                 Arrays.asList(insertStatement, updateStatement, deleteStatement)) {
             if (clickHouseStatement != null) {
-                attemptExecuteBatch(clickHouseStatement, maxRetries);
+                clickHouseStatement.executeBatch();
             }
         }
 
@@ -209,8 +206,6 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
                 + ", deleteSql='"
                 + deleteSql
                 + '\''
-                + ", maxRetries="
-                + maxRetries
                 + ", updateStrategy="
                 + updateStrategy
                 + ", ignoreDelete="

@@ -43,8 +43,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     private final ClickHouseRowConverter converter;
 
-    private final int maxRetries;
-
     private transient ClickHouseStatementWrapper statement;
 
     private transient ClickHouseConnectionProvider connectionProvider;
@@ -53,7 +51,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
             String insertSql, ClickHouseRowConverter converter, ClickHouseDmlOptions options) {
         this.insertSql = insertSql;
         this.converter = converter;
-        this.maxRetries = options.getMaxRetries();
     }
 
     @Override
@@ -94,7 +91,7 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     @Override
     public void executeBatch() throws SQLException {
-        attemptExecuteBatch(statement, maxRetries);
+        statement.executeBatch();
     }
 
     @Override
@@ -116,8 +113,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
                 + "insertSql='"
                 + insertSql
                 + '\''
-                + ", maxRetries="
-                + maxRetries
                 + ", connectionProvider="
                 + connectionProvider
                 + '}';
