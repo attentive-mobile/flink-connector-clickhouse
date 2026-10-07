@@ -43,8 +43,6 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     private final ClickHouseRowConverter converter;
 
-    private transient SQLException batchException;
-
     private transient ClickHouseStatementWrapper statement;
 
     private transient ClickHouseConnectionProvider connectionProvider;
@@ -93,17 +91,8 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     @Override
     public void executeBatch() throws SQLException {
-        if (batchException != null) {
-            throw batchException;
-        }
-        try {
-            // JDBC clears the batch even on failure; retrying it can report empty success.
-            statement.executeBatch();
-        } catch (SQLException exception) {
-            // Keep subsequent flushes/checkpoints from succeeding until Flink recreates the sink.
-            batchException = exception;
-            throw exception;
-        }
+        // JDBC clears failed batches. Propagate the failure so Flink can restore and replay.
+        statement.executeBatch();
     }
 
     @Override

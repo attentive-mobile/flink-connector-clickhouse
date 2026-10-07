@@ -43,7 +43,7 @@ import static org.junit.Assert.assertThrows;
 public class ClickHouseBatchFailureTest {
 
     @Test
-    public void failedCheckpointCannotRetryAnEmptyBatch() throws Exception {
+    public void failedCheckpointPropagatesWithoutRetryingAnEmptyBatch() throws Exception {
         ClearingStatement jdbc = new ClearingStatement();
         ClickHouseBatchOutputFormat format = openFormat(jdbc, 100);
         ClickHouseRowDataSinkFunction sink = new ClickHouseRowDataSinkFunction(format);
@@ -57,10 +57,6 @@ public class ClickHouseBatchFailureTest {
             assertEquals(0, jdbc.pendingRows);
             assertEquals(0, jdbc.insertedRows);
 
-            // A later checkpoint must not accept the now-empty JDBC batch as successful.
-            IOException nextFailure =
-                    assertThrows(IOException.class, () -> sink.snapshotState(null));
-            assertSame(jdbc.failure, nextFailure.getCause());
             assertEquals(1, jdbc.executeCalls);
         } finally {
             format.close();
@@ -68,14 +64,13 @@ public class ClickHouseBatchFailureTest {
     }
 
     @Test
-    public void failedSizeTriggeredFlushAlsoBlocksCheckpoint() throws Exception {
+    public void failedSizeTriggeredFlushPropagatesWithoutRetrying() throws Exception {
         ClearingStatement jdbc = new ClearingStatement();
         ClickHouseBatchOutputFormat format = openFormat(jdbc, 1);
         ClickHouseRowDataSinkFunction sink = new ClickHouseRowDataSinkFunction(format);
         try {
             jdbc.failNext = true;
             assertThrows(IOException.class, () -> sink.invoke(GenericRowData.of(1), null));
-            assertThrows(IOException.class, () -> sink.snapshotState(null));
             assertEquals(1, jdbc.executeCalls);
             assertEquals(0, jdbc.insertedRows);
         } finally {
