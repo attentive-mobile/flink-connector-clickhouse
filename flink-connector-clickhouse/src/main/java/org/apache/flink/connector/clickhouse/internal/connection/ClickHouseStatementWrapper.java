@@ -18,27 +18,111 @@
 package org.apache.flink.connector.clickhouse.internal.connection;
 
 import com.clickhouse.jdbc.ClickHousePreparedStatement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.sql.BatchUpdateException;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.UUID;
 
 /** Wrapper class for ClickHousePreparedStatement. */
 public class ClickHouseStatementWrapper {
+    private static final Logger LOG = LoggerFactory.getLogger(ClickHouseStatementWrapper.class);
     public final ClickHousePreparedStatement statement;
 
+    private final String sqlTemplate;
+
+    // Counts addBatch calls, not the driver's internal queue after an execution failure.
+    private int batchSize;
+
+    private String failureId;
+
     public ClickHouseStatementWrapper(ClickHousePreparedStatement statement) {
+        this(statement, null);
+    }
+
+    public ClickHouseStatementWrapper(ClickHousePreparedStatement statement, String sqlTemplate) {
         this.statement = statement;
+        this.sqlTemplate = sqlTemplate;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
     }
 
     public void addBatch() throws SQLException {
         statement.addBatch();
+        batchSize++;
     }
 
     public int[] executeBatch() throws SQLException {
-        return statement.executeBatch();
+        return executeBatch(0, 0, batchSize);
+    }
+
+    public int[] executeBatch(int retryTimes, int maxRetries, int expectedRows)
+            throws SQLException {
+        if (retryTimes == 0) {
+            failureId = null;
+        }
+        final int rowsAdded = batchSize;
+        final long startNanos = System.nanoTime();
+        try {
+            if (retryTimes > 0) {
+                LOG.warn(
+                        "ClickHouse executeBatch retry starting, retry times = {}, max_retries = {}, batch_id = {}, expected_rows = {}, rows_added_since_last_execute = {}, sql_template = {}",
+                        retryTimes,
+                        maxRetries,
+                        failureId,
+                        expectedRows,
+                        rowsAdded,
+                        sqlTemplate);
+            }
+            int[] updateCounts = statement.executeBatch();
+            if (retryTimes > 0) {
+                LOG.warn(
+                        "ClickHouse executeBatch retry returned, retry times = {}, max_retries = {}, batch_id = {}, expected_rows = {}, rows_added_since_last_execute = {}, returned_update_count = {}, duration_ms = {}, sql_template = {}",
+                        retryTimes,
+                        maxRetries,
+                        failureId,
+                        expectedRows,
+                        rowsAdded,
+                        updateCounts.length,
+                        (System.nanoTime() - startNanos) / 1_000_000L,
+                        sqlTemplate);
+            }
+            return updateCounts;
+        } catch (Exception exception) {
+            if (failureId == null) {
+                failureId = UUID.randomUUID().toString();
+            }
+            SQLException sqlException =
+                    exception instanceof SQLException ? (SQLException) exception : null;
+            int[] exceptionUpdateCounts =
+                    exception instanceof BatchUpdateException
+                            ? ((BatchUpdateException) exception).getUpdateCounts()
+                            : null;
+            LOG.error(
+                    "ClickHouse executeBatch error, retry times = {}, max_retries = {}, connector_retries_exhausted = {}, batch_id = {}, expected_rows = {}, rows_added_since_last_execute = {}, duration_ms = {}, sql_state = {}, error_code = {}, exception_update_count = {}, sql_template = {}",
+                    retryTimes,
+                    maxRetries,
+                    retryTimes >= maxRetries,
+                    failureId,
+                    expectedRows,
+                    rowsAdded,
+                    (System.nanoTime() - startNanos) / 1_000_000L,
+                    sqlException == null ? null : sqlException.getSQLState(),
+                    sqlException == null ? null : sqlException.getErrorCode(),
+                    exceptionUpdateCounts == null ? -1 : exceptionUpdateCounts.length,
+                    sqlTemplate,
+                    exception);
+            throw exception;
+        } finally {
+            batchSize = 0;
+        }
     }
 
     public void close() throws SQLException {

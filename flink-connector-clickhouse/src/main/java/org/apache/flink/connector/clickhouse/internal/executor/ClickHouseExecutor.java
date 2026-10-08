@@ -60,18 +60,12 @@ public interface ClickHouseExecutor extends Serializable {
 
     default void attemptExecuteBatch(ClickHouseStatementWrapper stmt, int maxRetries)
             throws SQLException {
+        final int expectedRows = stmt.getBatchSize();
         for (int i = 0; i <= maxRetries; i++) {
             try {
-                int[] updateCounts = stmt.executeBatch();
-                if (i > 0) {
-                    LOG.warn(
-                            "ClickHouse executeBatch retry returned, retry times = {}, returned_update_count = {}",
-                            i,
-                            updateCounts.length);
-                }
+                stmt.executeBatch(i, maxRetries, expectedRows);
                 return;
             } catch (Exception exception) {
-                LOG.error("ClickHouse executeBatch error, retry times = {}", i, exception);
                 if (i >= maxRetries) {
                     throw new SQLException(
                             String.format(
