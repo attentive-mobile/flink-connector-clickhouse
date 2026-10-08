@@ -60,8 +60,7 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
     public void prepareStatement(ClickHouseConnection connection) throws SQLException {
         statement =
                 new ClickHouseStatementWrapper(
-                        (ClickHousePreparedStatement) connection.prepareStatement(insertSql),
-                        insertSql);
+                        (ClickHousePreparedStatement) connection.prepareStatement(insertSql));
     }
 
     @Override
