@@ -68,12 +68,12 @@ public interface ClickHouseExecutor extends Serializable {
                 int[] updateCounts = stmt.executeBatch();
                 if (i > 0) {
                     LOG.warn(
-                            "ClickHouse executeBatch retry returned, retry times = {}, batch_id = {}, expected_rows = {}, returned_update_count = {}, sql_template = {}",
+                            "ClickHouse executeBatch retry returned, retry times = {}, batch_id = {}, expected_rows = {}, returned_update_count = {}, sql = {}",
                             i,
                             batchId,
                             expectedRows,
                             updateCounts.length,
-                            stmt.getSqlTemplate());
+                            stmt.getSql());
                 }
                 return;
             } catch (Exception exception) {
@@ -81,11 +81,11 @@ public interface ClickHouseExecutor extends Serializable {
                     batchId = UUID.randomUUID().toString();
                 }
                 LOG.error(
-                        "ClickHouse executeBatch error, retry times = {}, batch_id = {}, expected_rows = {}, sql_template = {}",
+                        "ClickHouse executeBatch error, retry times = {}, batch_id = {}, expected_rows = {}, sql = {}",
                         i,
                         batchId,
                         expectedRows,
-                        stmt.getSqlTemplate(),
+                        stmt.getSql(),
                         exception);
                 if (i >= maxRetries) {
                     throw new SQLException(

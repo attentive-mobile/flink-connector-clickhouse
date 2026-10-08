@@ -17,6 +17,7 @@
 
 package org.apache.flink.connector.clickhouse.internal.connection;
 
+import com.clickhouse.client.ClickHouseRequest;
 import com.clickhouse.jdbc.ClickHousePreparedStatement;
 
 import java.math.BigDecimal;
@@ -29,22 +30,20 @@ import java.sql.Timestamp;
 public class ClickHouseStatementWrapper {
     public final ClickHousePreparedStatement statement;
 
-    private final String sqlTemplate;
-
     // Counts addBatch calls, not the driver's internal queue after an execution failure.
     private int batchSize;
 
     public ClickHouseStatementWrapper(ClickHousePreparedStatement statement) {
-        this(statement, null);
-    }
-
-    public ClickHouseStatementWrapper(ClickHousePreparedStatement statement, String sqlTemplate) {
         this.statement = statement;
-        this.sqlTemplate = sqlTemplate;
     }
 
-    public String getSqlTemplate() {
-        return sqlTemplate;
+    public String getSql() {
+        try {
+            return String.join(
+                    "; ", statement.unwrap(ClickHouseRequest.class).getStatements(false));
+        } catch (Exception exception) {
+            return "<unavailable>";
+        }
     }
 
     public int getBatchSize() {
