@@ -29,16 +29,38 @@ import java.sql.Timestamp;
 public class ClickHouseStatementWrapper {
     public final ClickHousePreparedStatement statement;
 
+    private final String sqlTemplate;
+
+    private int batchSize;
+
     public ClickHouseStatementWrapper(ClickHousePreparedStatement statement) {
+        this(statement, null);
+    }
+
+    public ClickHouseStatementWrapper(ClickHousePreparedStatement statement, String sqlTemplate) {
         this.statement = statement;
+        this.sqlTemplate = sqlTemplate;
+    }
+
+    public String getSqlTemplate() {
+        return sqlTemplate;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
     }
 
     public void addBatch() throws SQLException {
         statement.addBatch();
+        batchSize++;
     }
 
     public int[] executeBatch() throws SQLException {
-        return statement.executeBatch();
+        try {
+            return statement.executeBatch();
+        } finally {
+            batchSize = 0;
+        }
     }
 
     public void close() throws SQLException {
