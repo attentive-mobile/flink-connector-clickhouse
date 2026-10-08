@@ -17,7 +17,6 @@
 
 package org.apache.flink.connector.clickhouse.internal.connection;
 
-import com.clickhouse.jdbc.ClickHouseConnection;
 import com.clickhouse.jdbc.ClickHousePreparedStatement;
 
 import java.math.BigDecimal;
@@ -42,12 +41,6 @@ public class ClickHouseStatementWrapper {
     public ClickHouseStatementWrapper(ClickHousePreparedStatement statement, String sqlTemplate) {
         this.statement = statement;
         this.sqlTemplate = sqlTemplate;
-    }
-
-    public static ClickHouseStatementWrapper prepare(ClickHouseConnection connection, String sql)
-            throws SQLException {
-        return new ClickHouseStatementWrapper(
-                (ClickHousePreparedStatement) connection.prepareStatement(sql), sql);
     }
 
     public String getSqlTemplate() {

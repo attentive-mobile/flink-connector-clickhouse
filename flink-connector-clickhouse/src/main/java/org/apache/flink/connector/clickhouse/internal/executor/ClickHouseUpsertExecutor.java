@@ -27,6 +27,7 @@ import org.apache.flink.connector.clickhouse.internal.options.ClickHouseDmlOptio
 import org.apache.flink.table.data.RowData;
 
 import com.clickhouse.jdbc.ClickHouseConnection;
+import com.clickhouse.jdbc.ClickHousePreparedStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,9 +105,18 @@ public class ClickHouseUpsertExecutor implements ClickHouseExecutor {
 
     @Override
     public void prepareStatement(ClickHouseConnection connection) throws SQLException {
-        this.insertStatement = ClickHouseStatementWrapper.prepare(connection, this.insertSql);
-        this.updateStatement = ClickHouseStatementWrapper.prepare(connection, this.updateSql);
-        this.deleteStatement = ClickHouseStatementWrapper.prepare(connection, this.deleteSql);
+        this.insertStatement =
+                new ClickHouseStatementWrapper(
+                        (ClickHousePreparedStatement) connection.prepareStatement(this.insertSql),
+                        this.insertSql);
+        this.updateStatement =
+                new ClickHouseStatementWrapper(
+                        (ClickHousePreparedStatement) connection.prepareStatement(this.updateSql),
+                        this.updateSql);
+        this.deleteStatement =
+                new ClickHouseStatementWrapper(
+                        (ClickHousePreparedStatement) connection.prepareStatement(this.deleteSql),
+                        this.deleteSql);
     }
 
     @Override

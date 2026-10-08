@@ -26,6 +26,7 @@ import org.apache.flink.connector.clickhouse.internal.options.ClickHouseDmlOptio
 import org.apache.flink.table.data.RowData;
 
 import com.clickhouse.jdbc.ClickHouseConnection;
+import com.clickhouse.jdbc.ClickHousePreparedStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,10 @@ public class ClickHouseBatchExecutor implements ClickHouseExecutor {
 
     @Override
     public void prepareStatement(ClickHouseConnection connection) throws SQLException {
-        statement = ClickHouseStatementWrapper.prepare(connection, insertSql);
+        statement =
+                new ClickHouseStatementWrapper(
+                        (ClickHousePreparedStatement) connection.prepareStatement(insertSql),
+                        insertSql);
     }
 
     @Override
