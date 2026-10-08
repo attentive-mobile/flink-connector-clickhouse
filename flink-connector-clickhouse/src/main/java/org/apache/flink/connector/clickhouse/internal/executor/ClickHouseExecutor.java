@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -60,12 +61,32 @@ public interface ClickHouseExecutor extends Serializable {
 
     default void attemptExecuteBatch(ClickHouseStatementWrapper stmt, int maxRetries)
             throws SQLException {
+        final int expectedRows = stmt.getBatchSize();
+        String batchId = null;
         for (int i = 0; i <= maxRetries; i++) {
             try {
-                stmt.executeBatch();
+                int[] updateCounts = stmt.executeBatch();
+                if (i > 0) {
+                    LOG.warn(
+                            "ClickHouse executeBatch retry returned, retry times = {}, batch_id = {}, expected_rows = {}, returned_update_count = {}, sql = {}",
+                            i,
+                            batchId,
+                            expectedRows,
+                            updateCounts.length,
+                            stmt.getSql());
+                }
                 return;
             } catch (Exception exception) {
-                LOG.error("ClickHouse executeBatch error, retry times = {}", i, exception);
+                if (batchId == null) {
+                    batchId = UUID.randomUUID().toString();
+                }
+                LOG.error(
+                        "ClickHouse executeBatch error, retry times = {}, batch_id = {}, expected_rows = {}, sql = {}",
+                        i,
+                        batchId,
+                        expectedRows,
+                        stmt.getSql(),
+                        exception);
                 if (i >= maxRetries) {
                     throw new SQLException(
                             String.format(
